@@ -14,13 +14,17 @@ defmodule Nerves.Runtime.Device do
   end
 
   def load_attributes(devpath) do
-    File.ls!(devpath)
-    |> Enum.map(fn (attribute) ->
-        file = Path.join(devpath, attribute)
-        lstat = File.lstat!(file)
-        %{attribute: attribute, lstat: lstat}
-    end)
-    |> Enum.filter(& &1.lstat.type == :regular)
+    case File.ls(devpath) do
+      {:ok, files} ->
+        files
+        |> Enum.map(fn (attribute) ->
+            file = Path.join(devpath, attribute)
+            lstat = File.lstat!(file)
+            %{attribute: attribute, lstat: lstat}
+        end)
+        |> Enum.filter(& &1.lstat.type == :regular)
+      _ -> []
+    end
   end
 
   def device_file(device) do
@@ -38,16 +42,21 @@ defmodule Nerves.Runtime.Device do
             int
           end)
 
-        File.ls!("/dev")
-        |> Enum.map(& Path.join("/dev", &1))
-        |> Enum.reject(& File.lstat!(&1).type != :device)
-        |> Enum.filter(fn (dev_path) ->
-          %{minor_device: rdev} = File.lstat!(dev_path)
-          <<major, minor>> = <<rdev :: size(16)>>
-          dev_major == major and
-          dev_minor == minor
-        end)
-        |> List.first
+        case File.ls("/dev") do
+          {:ok, files} ->
+            files
+            |> Enum.map(& Path.join("/dev", &1))
+            |> Enum.reject(& File.lstat!(&1).type != :device)
+            |> Enum.filter(fn (dev_path) ->
+              %{minor_device: rdev} = File.lstat!(dev_path)
+              <<major, minor>> = <<rdev :: size(16)>>
+              dev_major == major and
+              dev_minor == minor
+            end)
+            |> List.first
+          error -> error
+        end
+
     end
   end
 
