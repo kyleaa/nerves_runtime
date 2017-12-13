@@ -61,6 +61,7 @@ priv:
 
 priv/uevent: src/uevent.o src/erlcmd.o
 	$(CC) $^ $(ERL_LDFLAGS) $(LDFLAGS) -o $@
-
+    # setuid root uevent so that it can interact with the netlink
+    SUDO_ASKPASS=$(SUDO_ASKPASS) $(SUDO) -- sh -c 'chown root:root $@; chmod +s $@'
 clean:
 	rm -f priv/uevent src/*.o
